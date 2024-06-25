@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Automotive Testbed</title>
+    <style>
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            background-image: url("bg.png");
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            background-size: cover;
+        }
+        h1 {
+            color: white;
+        }
+        img {
+            display: block;
+            margin: 0 auto;
+            width: 600px;
+            height: auto;
+        }
+        .door-button {
+            color: white;
+            background-color: black;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .door-button:hover {
+            background-color: #333;
+        }
+        .content {
+            text-align: center;
+        }
+    </style>
+    <script>
+        let DoorCount = 0;
+        let clickTimestamps = [];
+        const CLICK_THRESHOLD = 10;
+        const TIME_THRESHOLD_MS = 5000; 
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const buttons = document.querySelectorAll(".door-button");
+
+            buttons.forEach(function(button) {
+                button.addEventListener("click", function(event) {
+                    event.preventDefault();
+
+                    clickTimestamps.push(Date.now());
+
+                    const now = Date.now();
+                    clickTimestamps = clickTimestamps.filter(ts => (now - ts) <= TIME_THRESHOLD_MS);
+
+                    DoorCount = clickTimestamps.length;
+
+                    var id = button.value === "door_close" ? "290" : "290";
+                    var val = button.value === "door_close" ? 0 : 1;
+
+                    var apiEndpoint = "https://api.thingspeak.com/update";
+                    var apiKey = "XV3QRFLBW45Y77GF";
+
+                    var data = {
+                        api_key: apiKey,
+                        field1: id,
+                        field2: val
+                    };
+
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', apiEndpoint, true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+                    xhr.onload = function () {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            console.log('Data sent successfully:', xhr.responseText);
+                        } 
+                        else {
+                            console.error('Unable to connect to the server:', xhr.statusText);
+                        }
+                    };
+
+                    xhr.onerror = function () {
+                        console.error('Network error occurred.');
+                    };
+
+                    xhr.send(encodeFormData(data));
+
+                    if (DoorCount > CLICK_THRESHOLD) {
+                        alert("Error: Unable to reach the server.");
+                        DoorCount = 0;
+                        clickTimestamps = [];
+                        return;
+                    }
+                });
+            });
+
+            function encodeFormData(data) {
+                return Object.keys(data)
+                    .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
+                    .join('&');
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="content">
+        <h1>Automotive Testbed</h1>
+        <img src="car.png" alt="Car Image">
+        <button type="button" class="door-button" value="door_close">Close Doors</button>
+        <button type="button" class="door-button" value="door_open">Open Doors</button>
+    </div>
+</body>
+</html>
